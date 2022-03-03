@@ -1,0 +1,337 @@
+#!/bin/bash
+
+Date=$(date +%Y-%m-%d)
+
+# root 권한실행 확인
+
+if [ $EUID != 0 ]; then
+    echo "This script must be run as root"
+    echo "현재계정 : $EUID"
+    exit
+fi
+
+echo ""
+echo " [ $Date 보안검사 ] "
+echo ""
+
+date=$(date)
+
+printf "[ 보안검사 실시일 ]" >> /script/$Date
+printf "[ 보안검사 실시일 ]" >> /script/WARN/$Date
+echo "" >> /script/$Date
+echo "" >> /script/WARN/$Date
+printf "%s\n " "$date" >> /script/$Date
+printf "%s\n " "$date" >> /script/WARN/$Date
+echo "" >> /script/$Date
+echo "" >> /script/WARN/$Date
+echo ""
+
+
+echo "### Password ###"
+echo ""
+
+echo "### Password ###" >> /script/$Date
+echo "" >> /script/$Date
+
+echo "### Password ###" >> /script/WARN/$Date
+echo "" >> /script/WARN/$Date
+
+
+MAX=`egrep -v '^#|^$' /etc/login.defs | grep PASS_MAX_DAYS | awk '{print $2}'`
+MIN=`egrep -v '^#|^$' /etc/login.defs | grep PASS_MIN_DAYS | awk '{print $2}'`
+
+if [ $MAX -gt 90 ]; then
+        echo "WARN! 패스워드 사용기간이 90일 이상입니다."
+        echo "WARN! 패스워드 사용기간이 90일 이상입니다." >> /script/$Date
+        echo "WARN! 패스워드 사용기간이 90일 이상입니다." >> /script/WARN/$Date
+fi
+
+printf "MAX : %s\n" "$MAX"
+echo ""
+
+printf "MAX : %s\n" "$MAX" >> /script/$Date
+echo "" >> /script/$Date
+
+printf "MAX : %s\n" "$MAX" >> /script/WARN/$Date
+echo "" >> /script/WARN/$Date
+
+if [ $MIN -lt 7 ]; then
+        echo "WARN! 패스워드 사용기간이 7일 이하입니다."
+        echo "WARN! 패스워드 사용기간이 7일 이하입니다." >> /script/$Date
+        echo "WARN! 패스워드 사용기간이 7일 이하입니다." >> /script/WARN/$Date
+fi
+
+printf "MIN : %s\n" "$MIN"
+echo ""
+echo ""
+
+printf "MIN : %s\n" "$MIN">> /script/$Date
+
+echo "### su 로그인 제한 확인 ###"
+echo ""
+
+echo "### su 로그인 제한 계정 ###" >> /script/$Date
+echo "" >> /script/$Date
+
+
+su=$(grep pam_wheel.so /etc/pam.d/su | grep -v '^#' | wc -l)
+
+
+if [ $su -gt 0 ]; then
+        cat /etc/group | grep wheel >> /script/$Date
+else
+        echo "WARN! 모든 계정에서 root 계정접근이 가능합니다."
+	echo ""
+        echo "WARN! 모든 계정에서 root 계정접근이 가능합니다." >> /script/$Date
+        echo "### su 로그인 제한 계정 ###" >> /script/WARN/$Date
+        echo "" >> /script/WARN/$Date
+        echo "WARN! 모든 계정에서 root 계정접근이 가능합니다." >> /script/WARN/$Date
+        echo "" >> /script/WARN/$Date
+fi
+
+echo ""
+echo "" >> /script/$Date
+echo "" >> /script/$Date
+echo "" >> /script/WARN/$Date
+
+
+
+
+echo "### SSH 활성화 여부 확인 ###"
+echo ""
+ 
+echo "### SSH 활성화 여부 ###" >> /script/$Date
+echo "" >> /script/$Date
+ 
+echo "### SSH 활성화 여부 ###" >> /script/WARN/$Date
+echo "" >> /script/WARN/$Date
+ 
+ 
+SSH=`cat /etc/ssh/sshd_config | grep "#PermitRootLogin" | awk '{print $2}'`
+ 
+if [ $SSH = "no" ]; then
+        echo "root계정 원격 로그인 거부되어있습니다." >> /script/$Date
+else
+        echo "WARN! root 계정 원격 로그인 허용되어있습니다."
+        echo ""
+        echo "WARN! root 계정 원격 로그인 허용되어있습니다." >> /script/$Date
+        echo "WARN! root 계정 원격 로그인 허용되어있습니다." >> /script/WARN/$Date
+        echo "" >> /script/WARN/$Date
+fi
+ 
+echo ""
+echo "" >> /script/$Date
+echo "" >> /script/$Date
+echo "" >> /script/WARN/$Date
+ 
+ 
+echo "### Telnet 활성화 여부 확인 ###"
+echo ""
+ 
+echo "### Telnet 활성화 여부 ###" >> /script/$Date
+echo "" >> /script/$Date
+ 
+ 
+ 
+TELNET=`systemctl is-active telnet.socket`
+ 
+if [ $TELNET = "active" ]; then
+        echo "WARN! Telnet 서비스가 활성화 되어있습니다."
+        echo ""
+	echo ""
+        echo "WARN! Telnet 서비스가 활성화 되어있습니다." >> /script/$Date
+	echo "### Telnet 활성화 여부 ###" >> /script/WARN/$Date
+	echo "" >> /script/WARN/$Date
+        echo "WARN! Telnet 서비스가 활성화 되어있습니다." >> /script/WARN/$Date
+        echo "" >> /script/WARN/$Date
+else
+        echo "Telnet 서비스가 비활성화 되어있습니다." >> /script/$Date
+fi
+ 
+echo "" >> /script/$Date
+echo "" >> /script/$Date
+echo "" >> /script/WARN/$Date
+
+
+
+
+
+
+. /root/bin/print.sh
+ 
+echo "<sh, ksh, bash 사용 시>"
+ 
+grep ^TMOUT /etc/profile > /dev/null 2>&1
+if [ $? -eq 0 ] ; then
+print_good "Session Timeout이 600초(10분) 이하로 설정되어 있는 경우 입니다."
+else
+print_error "Session Timeout이 600초(10분) 이하로 설정되지 않은 경우 입니다."
+print_info
+echo " => vi /etc/profile 확인."
+echo " => TMOUT=600 추가."
+fi
+
+
+
+
+
+
+
+echo "### 방화벽 목록 확인 ###"
+echo ""
+
+echo "### 방화벽 목록 ###" >> /script/$Date
+echo "" >> /script/$Date
+
+echo "--- Permanent ---" >> /script/$Date
+echo "" >> /script/$Date
+
+firewall-cmd --permanent --list-all >> /script/$Date
+echo "" >> /script/$Date
+
+echo "--- Run-Time ---" >> /script/$Date
+echo "" >> /script/$Date
+
+firewall-cmd --list-all >> /script/$Date
+echo "" >> /script/$Date
+echo "" >> /script/$Date
+
+
+echo "### 예약된 작업 List ###"
+echo "### 예약된 작업 List ###" >> /script/$Date
+
+echo ""
+echo "" >> /script/$Date
+
+cron=$(crontab -l | wc -l)
+
+if [ $cron -le 0 ]; then
+        echo "예약된 작업 List가 없습니다."
+        echo "예약된 작업 List가 없습니다." >> /script/$Date
+
+else
+        crontab -l >> /script/$Date
+fi
+echo "" >> /script/$Date
+echo "" >> /script/$Date
+echo ""
+echo ""
+
+echo "### Memory ###"
+echo ""
+
+echo "### Memory ###" >> /script/$Date
+echo "" >> /script/$Date
+
+
+Memory_total=`free | grep ^Mem | awk '{print $2}'`
+Memory_used=`free | grep ^Mem | awk '{print $3}'`
+Memory_percent=$((100*Memory_used/Memory_total))
+
+echo "Total : $Memory_total" >> /script/$Date
+echo "Used : $Memory_used" >> /script/$Date
+echo "사용량 : $Memory_percent" >> /script/$Date
+
+if [ $Memory_percent -gt 80 ]; then
+        echo "WARN! Memory 사용량이 80% 이상입니다."
+        echo ""
+        echo "WARN! Memory 사용량이 80% 이상입니다." >> /script/$Date
+        echo "" >> /script/$Date
+	echo "### Memory ###" >> /script/WARN/$Date
+	echo "" >> /script/WARN/$Date
+        echo "WARN! Memory 사용량이 80% 이상입니다." >> /script/WARN/$Date
+        echo "사용량 : $Memory_percent" >> /script/WARN/$Date
+        echo "" >> /script/WARN/$Date
+fi
+
+
+echo "" >> /script/$Date
+echo "" >> /script/$Date
+echo "" >> /script/WARN/$Date
+
+
+
+
+
+
+
+
+
+echo "### 디스크 저장용량 확인 ###"
+echo ""
+
+echo "### 디스크 저장용량 ###" >> /script/$Date
+echo "" >> /script/$Date
+
+
+
+disk=$(df -h | awk -F "[ %]+" 'NR!=1{print $5}')
+
+
+for i in $disk
+do
+        if [ $i -gt 80 ]; then
+                echo "WARN! 디스크 저장용량이 20% 이하 남았습니다."
+                echo "WARN! 디스크 저장용량이 20% 이하 남았습니다." >> /script/$Date
+		echo "### 디스크 저장용량 ###" >> /script/WARN/$Date
+		echo "" >> /script/WARN/$Date
+                echo "WARN! 디스크 저장용량이 20% 이하 남았습니다." >> /script/WARN/$Date
+                break
+        fi
+        if [ $i -gt 60 ]; then
+                echo "디스크 저장용량이 40% 이하 남았습니다." >> /script/$Date
+                break
+        fi
+        if [ $i -gt 40 ]; then
+                echo "디스크 저장용량이 60% 이하 남았습니다." >> /script/$Date
+                break
+        else
+                echo "디스크 저장용량이 60% 이상 남았습니다." >> /script/$Date
+                break
+        fi
+done
+
+echo ""
+echo "" >> /script/$Date
+echo "" >> /script/$Date
+
+
+
+ver=$(rpm -qa *-release)
+echo "### CentOS Ver. ###" >> /Sec_Check/$Date
+echo "" >> /Sec_Check/$Date
+yum update -y
+echo "CentOS 업데이트를 진행하였습니다." >> /Sec_Check/$Date
+echo "" >> /Sec_Check/$Date
+rpm -qa *-release >> /Sec_Check/$Date
+echo "" >> /Sec_Check/$Date
+echo "" >> /Sec_Check/$Date
+
+echo "### Linux Kernel Ver. ###"
+echo ""
+
+echo "### Linux Kernel Ver. ###" >> /script/$Date
+echo "" >> /script/$Date
+cat /proc/version >> /script/$Date
+echo "" >> /script/$Date
+echo "" >> /script/$Date
+
+
+echo "### Linux OS Ver. ###"
+echo ""
+
+echo "### Linux OS Ver. ###" >> /script/$Date
+echo "" >> /script/$Date
+cat /etc/redhat-release >> /script/$Date
+echo "" >> /script/$Date
+echo "" >> /script/$Date
+
+
+echo "### Network Info. ###"
+echo ""
+
+echo "### Network Info. ###" >> /script/$Date
+echo "" >> /script/$Date
+ifconfig >> /script/$Date
+echo "" >> /script/$Date
+echo "" >> /script/$Date
